@@ -4,33 +4,30 @@ var bodyParser = require('body-parser');
 router.use(bodyParser.urlencoded({ extended: true }));
 router.use(bodyParser.json());
 
-var Product = require('./Product');
+var User = require('./User');
 
-// CREATES A NEW PRODUCT
+// CREATES A NEW USER
 router.post('/', function (req, res) {
 
-    Product.create({
-            productName: req.body.productName,
-            productCode: req.body.productCode,
-            releaseDate: req.body.releaseDate,
-            price: req.body.price,
-            description: req.body.description,
-            starRating: req.body.starRating,
-            imageUrl: req.body.imageUrl
+    User.create({
+            firstName: req.body.firstName,
+            lastName: req.body.lastName,
+            username: req.body.username,
+            password: req.body.password,
         },
-        function (err, product) {
+        function (err, user) {
             if (err) return res.status(500).send("There was a problem adding the information to the database.");
-            res.status(200).send(product);
+            res.status(200).send(user);
         });
 
 });
 
-// RETURNS ALL THE PRODUCTS IN THE DATABASE
+// RETURNS ALL THE USERS IN THE DATABASE
 router.get('/', function (req, res) {
 
-    Product.find({}, function (err, products) {
+    User.find({}, function (err, users) {
         if (err) return res.status(500).send("There was a problem finding the users.");
-        res.status(200).send(products);
+        res.status(200).send(users);
     });
 
 });
@@ -38,25 +35,25 @@ router.get('/', function (req, res) {
 // GETS A SINGLE USER FROM THE DATABASE
 router.get('/:id', function (req, res) {
 
-    Product.findById(req.params.id, function (err, product) {
+    User.findById(req.params.id, function (err, user) {
         if (err) return res.status(500).send("There was a problem finding the user.");
-        if (!product) return res.status(404).send("No user found.");
-        res.status(200).send(product);
+        if (!user) return res.status(404).send("No user found.");
+        res.status(200).send(user);
     });
 
 });
 
-// DELETES A PRODUCT FROM THE DATABASE
+// DELETES A USER FROM THE DATABASE
 router.delete('/:id', function (req, res) {
 
-    Product.findByIdAndRemove(req.params.id, function (err, product) {
+    User.findByIdAndRemove(req.params.id, function (err, user) {
         if (err) return res.status(500).send("There was a problem deleting the user.");
         res.status(200).send("{}");
     });
 
 });
 
-// UPDATES A SINGLE PRODUCT IN THE DATABASE
+// UPDATES A SINGLE USER IN THE DATABASE
 router.put('/:id', function (req, res) {
 
     Product.findByIdAndUpdate(req.params.id, req.body, {new: true}, function (err, product) {
