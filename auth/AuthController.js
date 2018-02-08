@@ -7,7 +7,7 @@ var User = require('../user/user');
 var jwt = require('jsonwebtoken');
 var bcrypt = require('bcryptjs');
 var config = require('../config');
-
+var VerifyToken = require('./VerifyToken');
 
 router.post('/register', function(req, res) {
 
