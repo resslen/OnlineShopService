@@ -4,14 +4,14 @@ var bodyParser = require('body-parser');
 router.use(bodyParser.urlencoded({ extended: true }));
 router.use(bodyParser.json());
 
-var User = require('./User');
+var User = require('./user');
+
 
 // CREATES A NEW USER
 router.post('/', function (req, res) {
 
     User.create({
-            firstName: req.body.firstName,
-            lastName: req.body.lastName,
+            email: req.body.email,
             username: req.body.username,
             password: req.body.password,
         },
@@ -56,9 +56,9 @@ router.delete('/:id', function (req, res) {
 // UPDATES A SINGLE USER IN THE DATABASE
 router.put('/:id', function (req, res) {
 
-    Product.findByIdAndUpdate(req.params.id, req.body, {new: true}, function (err, product) {
+    User.findByIdAndUpdate(req.params.id, req.body, {new: true}, function (err, user) {
         if (err) return res.status(500).send("There was a problem updating the user.");
-        res.status(200).send(product);
+        res.status(200).send(user);
     });
 
 });
