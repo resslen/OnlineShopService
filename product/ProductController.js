@@ -63,12 +63,24 @@ router.put('/:id', function (req, res) {
 });
 
 // RETURNS 6 PRODUCTS FROM THE DATABASE
-router.get('/promoted', function (req, res) {
-
-    Product.find.limit(6)({}, function (err, products) {
-        if (err) return res.status(500).send("There was a problem finding the products.");
+router.get('/home/promoted' , function (req, res) {
+    var q = Product.find({}).sort({'_id': +1}).limit(6);
+    q.exec(function (err, products) {
+        if (err) return res.status(500).send(err);
         res.status(200).send(products);
     });
 });
 
+// DELETE ONE PRODUCT (UPDATE)
+router.get('/buy/:id', function (req, res) {
+
+    Product.findById(req.params.id, function (err, product) {
+        if (err) return res.status(500).send("There was a problem getting the product.");
+        product.amount--;
+        Product.findByIdAndUpdate(req.params.id, product, {new: true}, function (err, product2) {
+            if (err) return res.status(500).send("There was a problem updating the product.");
+            res.status(200).send(product2);
+        });
+    });
+});
 module.exports = router;
