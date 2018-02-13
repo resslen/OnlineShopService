@@ -3,26 +3,46 @@ var router = express.Router();
 var bodyParser = require('body-parser');
 router.use(bodyParser.urlencoded({ extended: false }));
 router.use(bodyParser.json());
+const val = require('express-validator/check');
+const check = val.check;
+const validationResult = val.validationResult;
 var User = require('../user/user');
 var jwt = require('jsonwebtoken');
 var bcrypt = require('bcryptjs');
 var config = require('../config');
 var VerifyToken = require('./VerifyToken');
 
-router.post('/register', function(req, res) {
+const validators = [
+    check('email')
+        .exists()
+        .trim(),
+    check('username')
+        .isLength({min: 3, max: 20}),
+    check('password')
+        .isLength({min: 6, max: 60})
+];
+
+router.post('/register', validators, function(req, res, next) {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        const mapped = errors.mapped();
+        console.log(mapped);
+        return res.status(400).send("Bad request");
+    }
 
     var hashedPassword = bcrypt.hashSync(req.body.password, 8);
 
     User.create({
             email : req.body.email,
             username : req.body.username,
-            password : hashedPassword
+            password : hashedPassword,
+            admin : false,
         },
         function (err, user) {
             if (err) return res.status(500).send("There was a problem registering the user.")
 
             // create a token
-            var token = jwt.sign({ id: user._id }, config.secret, {
+            var token = jwt.sign({ id: user._id, admin: user.admin }, config.secret, {
                 expiresIn: 86400 // expires in 24 hours
             });
 
@@ -30,23 +50,16 @@ router.post('/register', function(req, res) {
         });
 });
 
-router.get('/me', function(req, res) {
+router.get('/me', VerifyToken, function(req, res, next) {
 
-    var token = req.headers['x-access-token'];
-    if (!token) return res.status(401).send({ auth: false, message: 'No token provided.' });
+    User.findById(req.verId, { password: 0, admin: 0 }, function (err, user) {
+        if (err) return res.status(500).send("There was a problem finding the user.");
+        if (!user) return res.status(404).send("No user found.");
 
-    jwt.verify(token, config.secret, function(err, decoded) {
-        if (err) return res.status(500).send({ auth: false, message: 'Failed to authenticate token.' });
-
-        User.findById(decoded.id, {password: 0}, function (err, user) {
-            if (err) return res.status(500).send("There was a problem finding the user.");
-            if (!user) return res.status(404).send("No user found.");
-
-            res.status(200).send(user);
-        });
+        res.status(200).send(user);
     });
-});
 
+});
 //LOGIN
 router.post('/login', function(req, res) {
 
@@ -57,7 +70,7 @@ router.post('/login', function(req, res) {
         var passwordIsValid = bcrypt.compareSync(req.body.password, user.password);
         if (!passwordIsValid) return res.status(401).send({ auth: false, token: null });
 
-        var token = jwt.sign({ id: user._id }, config.secret, {
+        var token = jwt.sign({ id: user._id, admin: user.admin }, config.secret, {
             expiresIn: 86400 // expires in 24 hours
         });
 

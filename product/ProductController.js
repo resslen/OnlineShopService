@@ -1,13 +1,49 @@
 var express = require('express');
 var router = express.Router();
 var bodyParser = require('body-parser');
+const val = require('express-validator/check');
+const check = val.check;
+const validationResult = val.validationResult;
 router.use(bodyParser.urlencoded({ extended: true }));
 router.use(bodyParser.json());
 
 var Product = require('./product');
+var VerifyToken = require('../auth/VerifyToken');
+const validators = [
+    check('productName')
+        .isLength({min: 3, max: 100})
+        .trim(),
+    check('productCode')
+        .isLength({min: 3, max: 30})
+        .trim(),
+    check('releaseDate')
+        .exists(),
+    check('price')
+        .toFloat(),
+    check('description')
+        .isLength({min: 3, max: 10000})
+        .trim(),
+    check('starRating')
+        .toInt(),
+    check('imageUrl')
+        .trim()
+        .isURL(),
+    check('amount')
+        .toInt()
+];
 
 // CREATES A NEW PRODUCT
-router.post('/', function (req, res) {
+router.post('/', [ VerifyToken, validators ], function (req, res, next) {
+    if(!req.isAdmin){
+        return res.status(403).send("Forbidden");
+    }
+
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        const mapped = errors.mapped();
+        console.log(mapped);
+        return res.status(400).send("Bad request");
+    }
 
     Product.create({
             productName: req.body.productName,
@@ -34,8 +70,8 @@ router.get('/', function (req, res) {
     });
 });
 
-// GETS A SINGLE USER FROM THE DATABASE
-router.get('/:id', function (req, res) {
+// GETS A PRODUCT USER FROM THE DATABASE
+router.get('/:id', VerifyToken, function (req, res, next) {
 
     Product.findById(req.params.id, function (err, product) {
         if (err) return res.status(500).send("There was a problem finding the product.");
@@ -45,8 +81,10 @@ router.get('/:id', function (req, res) {
 });
 
 // DELETES A PRODUCT FROM THE DATABASE
-router.delete('/:id', function (req, res) {
-
+router.delete('/:id', VerifyToken, function (req, res, next) {
+    if(!req.isAdmin){
+        return res.status(403).send("Forbidden");
+    }
     Product.findByIdAndRemove(req.params.id, function (err, product) {
         if (err) return res.status(500).send("There was a problem deleting the product.");
         res.status(200).send("{}");
@@ -54,8 +92,17 @@ router.delete('/:id', function (req, res) {
 });
 
 // UPDATES A SINGLE PRODUCT IN THE DATABASE
-router.put('/:id', function (req, res) {
+router.put('/:id', [ VerifyToken, validators], function (req, res, next) {
+    if(!req.isAdmin){
+        return res.status(403).send("Forbidden");
+    }
 
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        const mapped = errors.mapped();
+        console.log(mapped);
+        return res.status(400).send("Bad request");
+    }
     Product.findByIdAndUpdate(req.params.id, req.body, {new: true}, function (err, product) {
         if (err) return res.status(500).send("There was a problem updating the product.");
         res.status(200).send(product);
@@ -71,11 +118,11 @@ router.get('/home/promoted' , function (req, res) {
     });
 });
 
-// DELETE ONE PRODUCT (UPDATE)
-router.get('/buy/:id', function (req, res) {
-
+// BUY ONE PRODUCT (UPDATE)
+router.get('/buy/:id', VerifyToken, function (req, res, next) {
     Product.findById(req.params.id, function (err, product) {
         if (err) return res.status(500).send("There was a problem getting the product.");
+        if (!product) return res.status(404).send("No product found.");
         product.amount--;
         Product.findByIdAndUpdate(req.params.id, product, {new: true}, function (err, product2) {
             if (err) return res.status(500).send("There was a problem updating the product.");
